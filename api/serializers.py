@@ -17,12 +17,12 @@ class PartySerializer(serializers.HyperlinkedModelSerializer):
 
 class MemberSerializer(serializers.ModelSerializer):
     signatures = serializers.ReadOnlyField(read_only=True)
-    
+    total_signatures = serializers.IntegerField()
     #party = PartySerializer(read_only=True, many=True)
 
     class Meta:
         model = Member
-        fields = ('member_id', 'name', 'dob', 'signatures')
+        fields = ('member_id', 'name', 'dob', 'total_signatures', 'absence', 'signatures')
 
 
 class IssueSerializer(serializers.HyperlinkedModelSerializer):
@@ -49,12 +49,26 @@ class SessionSerializer(serializers.HyperlinkedModelSerializer):
         model = Session
         fields = ('session_id', 'date_from', 'date_to', 'issues', 'members')
 
-class CommitteeSerializer(serializers.HyperlinkedModelSerializer):
+class SimpleSessionSerializer(serializers.HyperlinkedModelSerializer):
 
     class Meta:
         model = Session
-        fields = ('committee_id', 'name', 'short_abbr', 'long_abbr')
+        fields = ('session_id',)
 
+
+class CommitteeSerializer(serializers.HyperlinkedModelSerializer):
+    session = SimpleSessionSerializer(many=True, read_only=True)
+
+    class Meta:
+        model = Committee
+        fields = ('committee_id', 'name', 'short_abbr', 'long_abbr', 'session')
+
+class CommitteeMeetingSerializer(serializers.HyperlinkedModelSerializer):
+    committee = CommitteeSerializer(read_only=True)
+
+    class Meta:
+        model = CommitteeMeeting
+        fields = ('meeting_id', 'committee', 'date_from', 'date_to')
 
 class IssueSerializer(serializers.HyperlinkedModelSerializer):
 

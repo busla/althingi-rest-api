@@ -1,5 +1,5 @@
 from django.db import models
-from django.db.models import Count
+from django.db.models import Count, Max, Q
 
 class Session(models.Model):
     session_id = models.IntegerField(null=True, blank=True)
@@ -10,7 +10,7 @@ class Session(models.Model):
 
         members = Member.objects.filter(seat__session=self) \
             .values() \
-            .annotate(total=Count('pm_id')) \
+            .annotate(total=Count('member_id')) \
             .order_by('-total')
         
         return members
@@ -37,17 +37,26 @@ class Member(models.Model):
     
     def _get_total_signatures(self):
 
-        signatures = Signature.objects.filter(member=self, stance='fjarverandi')
-
-
-        total_signatures = signatures \
+        total_signatures = Signature.objects \
+            .filter(member=self) \
             .values('stance') \
             .annotate(total=Count('stance')) \
             .order_by('stance')
-        
+
         return total_signatures
 
     signatures = property(_get_total_signatures)
+
+    def _get_total_absence(self):
+
+        total_absence = Signature.objects \
+            .filter(member=self) \
+            .filter(Q(stance='fjarverandi') | Q(stance='boðaði fjarvist')) \
+            .count()
+        return total_absence
+
+    absence = property(_get_total_absence)
+
 
     def __str__(self):
         return self.name
@@ -127,6 +136,7 @@ class Committee(models.Model):
     name = models.CharField(max_length=254, null=True, blank=True)
     short_abbr = models.CharField(max_length=254, null=True, blank=True)
     long_abbr = models.CharField(max_length=254, null=True, blank=True)
+    session = models.ManyToManyField(Session)
 
     def __str__(self):
         return self.name

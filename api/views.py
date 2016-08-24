@@ -46,17 +46,19 @@ def session_spider(request, spider):
     return Response(r.json()['items'])
 
 @api_view(['GET'])
-def committee_spider(request, spider):
+def committee_spider(request, spider, session):
     """
     Scraped committees from althingi
     """
-    payload = {'spider_name': spider, 'url': unquote_plus(utils.spider_url[spider])}
+    payload = {'spider_name': spider, 'url': unquote_plus(utils.spider_url[spider] % session)}
     r = requests.get('http://localhost:9080/crawl.json?', params=payload)
     spider_response = r.json()['items']
 
+    session_obj = Session.objects.get(session_id=int(session))
+
     for item in spider_response:
 
-        Committee.objects.update_or_create(
+        committee_obj, created = Committee.objects.update_or_create(
             committee_id=item['committee_id'],
             defaults = {
                 'name': item['name'], 
@@ -64,6 +66,34 @@ def committee_spider(request, spider):
                 'long_abbr': item['long_abbr'], 
                 }
             )        
+        committee_obj.session.add(session_obj)
+
+    return Response(r.json()['items'])
+
+@api_view(['GET'])
+def committee_meeting_spider(request, spider, session):
+    """
+    Scraped committee meetings from althingi
+    """
+    payload = {'spider_name': spider, 'url': unquote_plus(utils.spider_url[spider] % session)}
+    r = requests.get('http://localhost:9080/crawl.json?', params=payload)
+    spider_response = r.json()['items']
+
+    session_obj = Session.objects.get(session_id=session)
+
+    for item in spider_response:
+        committee_obj = Committee.objects.get(committee_id=item['committee'])
+        if (item['start_time'] and item['end_time']):
+
+            CommitteeMeeting.objects.update_or_create(
+                meeting_id=item['meeting_id'],
+                defaults = {
+                    'session': session_obj, 
+                    'committee': committee_obj, 
+                    'date_from': datetime.datetime.strptime(item['start_time'], '%Y-%m-%dT%H:%M:%S'),
+                    'date_to': datetime.datetime.strptime(item['end_time'], '%Y-%m-%dT%H:%M:%S'),
+                    }
+                )            
     
     return Response(r.json()['items'])
 
@@ -77,7 +107,7 @@ def issue_spider(request, spider, session):
     r = requests.get('http://localhost:9080/crawl.json?', params=payload)
     spider_response = r.json()['items']
 
-    session_obj = get_object_or_404(Session, session_id=session)
+    session_obj = Session.objects.get(session_id=session)
 
     for item in spider_response:
         issue_obj, created = Issue.objects.update_or_create(
@@ -95,8 +125,7 @@ def member_spider(request, spider, session):
 
     payload = {'spider_name': spider, 'url': unquote_plus(utils.spider_url[spider] % session)}
     r = requests.get('http://localhost:9080/crawl.json?', params=payload)
-    spider_response = r.json()['items']
-    print(spider_response)
+    spider_response = r.json()['items']    
     session_obj = get_object_or_404(Session, session_id=session)
 
     for item in spider_response:
@@ -158,7 +187,7 @@ def petition_spider(request, spider, session):
     created_petitions = []
     
     for item in spider_response:
-        print(item['issue_id'])
+        
         issue_obj = get_object_or_404(Issue, issue_id=item['issue_id'], session=session_obj)
         #member_obj = get_object_or_404(Member, pm_id=item['issue_id'])
         petition_obj, created = Petition.objects.update_or_create(
@@ -169,8 +198,7 @@ def petition_spider(request, spider, session):
                 'date_created': pytz.timezone("UTC").localize(parse_datetime(item['date_created']), is_dst=None)
                 #'date_created': parse_datetime(item['date_created'])                
             })
-        for signature in item['signatures']:
-            print('Signature: %s' % signature)
+        for signature in item['signatures']:            
             member_obj = get_object_or_404(Member, member_id=signature['member_id'])
 
             
@@ -179,22 +207,21 @@ def petition_spider(request, spider, session):
                 member=member_obj,
                 defaults={                    
                     'stance': signature['signature'].lower()
-                })
-            
-            print('Created: %s' % signature_obj)   
+                })            
 
     return Response(r.json()['items'])
 
 @api_view(['GET'])
-def scrape_all(request):
+def scrape_all(request, session):
 
     response = (
         session_spider(request, spider='session') and
-        committee_spider(request, spider='committee') and
+        committee_spider(request, spider='committeestee') and
         party_spider(request, spider='party') and
-        member_spider(request, spider='member', session=145) and
-        issue_spider(request, spider='issue', session=145) and
-        petition_spider(request, spider='petition', session=145)
+        member_spider(request, spider='member', session=session) and
+        issue_spider(request, spider='issue', session=session) and
+        petition_spider(request, spider='petition', session=session) and
+        committee_meeting_spider(request, spider='committee_meeting', session=session)
    )    
     return response
 
@@ -310,8 +337,8 @@ class MemberViewSet(viewsets.ReadOnlyModelViewSet):
     """
     lookup_field = 'member_id'
 
-    queryset = Member.objects.all()
-    #queryset = Member.objects.all().annotate(stance=Count('signature'))
+    #queryset = Member.objects.all()
+    queryset = Member.objects.annotate(total_signatures=Count('signature'))
     serializer_class = MemberSerializer    
 
     filter_backends = (filters.DjangoFilterBackend,)
@@ -338,6 +365,13 @@ class CommitteeViewSet(viewsets.ReadOnlyModelViewSet):
     """
     queryset = Committee.objects.all().order_by('committee_id')
     serializer_class = CommitteeSerializer
+
+class CommitteeMeetingViewSet(viewsets.ReadOnlyModelViewSet):
+    """
+    This viewset automatically provides `list` and `retrieve` actions.    
+    """
+    queryset = CommitteeMeeting.objects.all().order_by('meeting_id')
+    serializer_class = CommitteeMeetingSerializer
 
 class PartyViewSet(viewsets.ReadOnlyModelViewSet):
     """
