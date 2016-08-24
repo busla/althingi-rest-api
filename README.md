@@ -8,6 +8,7 @@ Django REST þjónusta sem skilar gögnum frá Alþingi. Til að nota þjónustu
 * python manage.py makemigrations api
 * python manage.py migrate
 * python manage.py createsuperuser
+* * python manage.py runserver
 
 # Kalla í sköfuna
 Til að sækja öll gögn fyrir löggjafarþing kallarðu í sköfuna sem vistar öll gögn í DB og venslar saman. Þetta gæti tekið nokkrar mínútur. Núverandi löggjafarþing er 145.
