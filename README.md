@@ -25,8 +25,8 @@ Hægt er að sækja öll gögn með því að kalla í ARA:
 
 ## Útreikningar - lokið
 * Heildarfjöldi atkvæða hvers og eins Alþingismanns
-* Heildarfjöldi fjarvista (*fjarverandi* og *boðaði fjarvist* tekið saman)
-* Heildarfjöldi atkvæða eftir tegund (*já*, *nei*, *greiðir ekki atkvæði*, *fjarverandi*, *boðaði fjarvist*)
+* Heildarfjöldi fjarvista hvers alþingismanns (*fjarverandi* og *boðaði fjarvist* tekið saman)
+* Heildarfjöldi atkvæða hvers alþingismanns eftir tegund (*já*, *nei*, *greiðir ekki atkvæði*, *fjarverandi*, *boðaði fjarvist*)
 
 ## Útreikningar - í vinnslu
 * Uppreisnarseggir
