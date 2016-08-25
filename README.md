@@ -38,6 +38,7 @@ Hægt er að sækja öll gögn með því að kalla í ARA:
 * Þingmaður talar lengst
 * Þingmaður talar styst
 * Þingmanni í nöp við málaflokk
+* Vægi stjórnarandstöðu í nefndum
 * ... þínar tillögur?
 
 # Fikta í ARA
